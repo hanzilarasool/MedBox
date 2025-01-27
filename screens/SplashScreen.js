@@ -14,7 +14,7 @@ const SplashScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* <Image source={require("./assets/logo.png")} style={styles.logo} /> */}
-      <Text style={styles.headline}>Welcome to Our App</Text>
+      <Text style={styles.headline}>Welcome to MedBox.io</Text>
     </View>
   );
 };

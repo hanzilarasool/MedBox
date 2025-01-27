@@ -6,12 +6,12 @@ const Signup = ({ navigation }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(""); 
   const [success, setSuccess] = useState("");
 
   const handleSignup = async () => {
     try {
-      const response = await axios.post("http://127.0.0.1:5000/api/user/register", {
+      const response = await axios.post(`${process.env.BACKEND_URL}/api/user/register`, {
         name,
         email,
         password,
@@ -23,7 +23,7 @@ const Signup = ({ navigation }) => {
       setError(err.response?.data?.error || "Something went wrong");
       setSuccess("");
     }
-  };
+  }; 
 
   const handleLoginRedirect = () => {
     navigation.navigate("Login");

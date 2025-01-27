@@ -1,49 +1,59 @@
 import React, { useState } from "react";
 import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from "react-native";
 import axios from "axios";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Login = ({ navigation }) => {
+  // const BACKEND_URL = process.env.BACKEND_URL ;
+
+// console.log(BACKEND_URL, "is the backend url");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleLogin = async () => {
+    
     try {
-      const response = await axios.post("http://localhost:5000/api/user/login", { email, password });
-      await AsyncStorage.setItem("token", response.data.token);
+      const response = await axios.post(`http://192.168.1.6:5000/api/user/login`, {
+        email,
+        password,
+      });
+      setSuccess(response.data.message);
+      setError("");
       navigation.navigate("Home");
     } catch (err) {
-      setError(err.response.data.error || "Something went wrong");
+      setError(err.response?.data?.error || "Something went wrong");
+      setSuccess("");
     }
   };
+
   const handleSignupRedirect = () => {
     navigation.navigate("Signup");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Welcome <Text style={{color:"#0b9516f4"}}>MedBox.io</Text></Text>
+      <Text style={styles.title}>Login</Text>
       <TextInput
+        style={styles.input}
         placeholder="Email"
         value={email}
         onChangeText={setEmail}
-        style={styles.input}
       />
       <TextInput
+        style={styles.input} 
         placeholder="Password"
         value={password}
         secureTextEntry
         onChangeText={setPassword}
-        style={styles.input}
       />
-    
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {success ? <Text style={styles.success}>{success}</Text> : null}
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      <Text style={{ marginBottom: 20,alignSelf:"flex-start",marginLeft:11 }} >
-        Don't have an account? <Text style={{ color: "blue", textDecorationLine: "underline" }} onPress={handleSignupRedirect}>Signup</Text>
+      <Text style={{ marginBottom: 20, alignSelf: "flex-start", marginLeft: 11 }}>
+        Don't have an account? <Text style={{ color: "blue", textDecorationLine: "underline" }} onPress={handleSignupRedirect}>Sign Up</Text>
       </Text>
     </View>
   );
@@ -54,47 +64,49 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f2f2f2",
-    paddingHorizontal: 20,
+    padding: 20,
+    backgroundColor: "#f9f9f9",
   },
-  header: {
+  title: {
     fontSize: 28,
     fontWeight: "bold",
+    marginBottom: 20,
     color: "#333",
-    marginBottom: 40,
-    textAlign: "center",
   },
   input: {
     width: "100%",
-    height: 50,
-    borderColor: "#ddd",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    marginBottom: 15,
+    padding: 15,
+    marginVertical: 10,
     backgroundColor: "#fff",
-    fontSize: 16,
-    color: "#333",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   button: {
     width: "100%",
-    height: 50,
-    backgroundColor: "#252825",
+    backgroundColor: "#262626",
+    padding: 15,
     borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    elevation: 3, // Shadow for Android
+    marginVertical: 10,
   },
   buttonText: {
-    fontSize: 18,
-    fontWeight: "bold",
+    textAlign: "center",
     color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
   },
-  errorText: {
-    fontSize: 14,
-    color: "#ff4d4d",
-    marginTop: 10,
+  error: {
+    color: "red",
+    marginBottom: 10,
+  },
+  success: {
+    color: "green",
+    marginBottom: 10,
   },
 });
 
