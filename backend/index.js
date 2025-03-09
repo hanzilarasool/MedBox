@@ -4,6 +4,7 @@ const cors = require("cors");
 // routes
 const boxRouter = require("./routes/box-routes");
 const userRouter=require("./routes/user-routes");
+const chatRouter = require("./routes/chat-routes");
 // middleware
 
 require("dotenv").config();
@@ -22,6 +23,7 @@ app.use((req,res,next)=>{
 })
   app.use("/api/user",userRouter);
   app.use("/api/boxes", boxRouter);
+  app.use("/api/chat", chatRouter);
 
 app.get("/", (req, res) => res.send("Server is running!"));
 
