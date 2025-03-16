@@ -40,7 +40,8 @@ export default function App() {
         <Stack.Screen
           name="Boxes"
           component={BoxesScreen }
-          options={{ title: "Boxes" }}
+          // options={{ title: "Boxes" }}
+          options={{ headerShown: false }} // Hide the header (no back arrow)
         />
         <Stack.Screen
   name="BoxDetail"

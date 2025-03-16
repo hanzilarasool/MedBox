@@ -137,5 +137,14 @@ const login = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-module.exports = { register, verifyOTP, login };
+// User Logout (Optional server-side endpoint)
+const logout = async (req, res) => {
+  try {
+    // Since JWT is stateless, server doesn't need to do much.
+    // Client clears the token, so this is just a confirmation endpoint.
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+module.exports = { register, verifyOTP, login,logout };

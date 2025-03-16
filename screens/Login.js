@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, TextInput, Text, StyleSheet, TouchableOpacity } from "react-native";
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from "expo-constants";
@@ -13,25 +13,25 @@ const Login = ({ navigation }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post(`http:${IP}:5000/api/user/login`, {
+      setError("");
+      setSuccess("");
+
+      const response = await axios.post(`http://${IP}:5000/api/user/login`, {
         email,
         password,
       });
 
-      try {
-        await AsyncStorage.multiSet([
-          ['token', response.data.token],
-          ['user', JSON.stringify(response.data.user)]
-        ]);
-        setSuccess("Login successful!");
-        navigation.navigate("Boxes");
-      } catch (storageError) {
-        setError("Failed to store login data");
-      }
+      await AsyncStorage.multiSet([
+        ['token', response.data.token],
+        ['user', JSON.stringify(response.data.user)],
+      ]);
+
+      setSuccess("Login successful!");
+      setTimeout(() => navigation.navigate("Boxes"), 1000); // Navigate after 1 second
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");
     }
@@ -41,14 +41,15 @@ const Login = ({ navigation }) => {
     navigation.navigate("Signup");
   };
 
-  // Toggle password visibility
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome <Text style={{color:"rgb(93, 101, 176)",fontSize:"26"}}>MedBox</Text></Text>
+      <Text style={styles.title}>
+        Welcome <Text style={{ color: "rgb(93, 101, 176)", fontSize: 26 }}>MedBox</Text>
+      </Text>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -61,15 +62,12 @@ const Login = ({ navigation }) => {
           style={styles.input}
           placeholder="Password"
           value={password}
-          secureTextEntry={!showPassword} // Toggle visibility
+          secureTextEntry={!showPassword}
           onChangeText={setPassword}
         />
-        <TouchableOpacity
-          style={styles.eyeIcon}
-          onPress={togglePasswordVisibility}
-        >
+        <TouchableOpacity style={styles.eyeIcon} onPress={togglePasswordVisibility}>
           <Ionicons
-            name={showPassword ? 'eye' : 'eye-off'}
+            name={showPassword ? "eye" : "eye-off"}
             size={24}
             color="gray"
           />
@@ -80,8 +78,14 @@ const Login = ({ navigation }) => {
       <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
-      <Text style={{ marginBottom: 20, alignSelf: "flex-start", marginLeft: 11 ,fontSize:15,color:"gray",marginTop:5}}>
-        Don't have an account? <Text style={{ color: "rgb(93, 101, 176)", textDecorationLine: "underline",fontSize:15 ,fontWeight:"bold"}} onPress={handleSignupRedirect}>Sign Up</Text>
+      <Text style={{ marginBottom: 20, alignSelf: "flex-start", marginLeft: 11, fontSize: 15, color: "gray", marginTop: 5 }}>
+        Don't have an account?{" "}
+        <Text
+          style={{ color: "rgb(93, 101, 176)", textDecorationLine: "underline", fontSize: 15, fontWeight: "bold" }}
+          onPress={handleSignupRedirect}
+        >
+          Sign Up
+        </Text>
       </Text>
     </View>
   );
@@ -100,7 +104,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 20,
     color: "gray",
-    
   },
   input: {
     width: "100%",
@@ -127,7 +130,7 @@ const styles = StyleSheet.create({
     right: 15,
   },
   button: {
-    width: "100%", // Corrected to 100% instead of 100
+    width: "100%",
     backgroundColor: "rgb(93, 101, 176)",
     padding: 15,
     borderRadius: 10,

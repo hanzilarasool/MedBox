@@ -2,7 +2,7 @@ const express = require("express");
 const User = require("../models/user-model");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const { register, login, verifyOTP } = require("../controllers/user-controller");
+const { register, login, verifyOTP ,logout} = require("../controllers/user-controller");
 
 const router = express.Router();
 
@@ -14,5 +14,6 @@ router.post("/verify-otp", verifyOTP);
 
 // Login User
 router.post("/login", login);
+router.post("/logout", logout); // Added logout endpoint
 
 module.exports = router;

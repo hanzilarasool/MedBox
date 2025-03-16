@@ -9,31 +9,40 @@ import {
   Modal 
 } from 'react-native';
 import ChatAssistantModal from '../components/ChatAssistantModal';
-import { Ionicons } from '@expo/vector-icons';
 import { BoxesContext } from '../contexts/BoxesContext';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BoxesScreen = () => {
   const { state, fetchBoxes, selectBox } = useContext(BoxesContext);
   const navigation = useNavigation();
   const [showChat, setShowChat] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetchBoxes();
-  }, []);
+    const initialize = async () => {
+      await fetchBoxes();
+      await loadUserData();
+      await configureAndScheduleNotifications();
+    };
+    initialize();
+  }, []); // Runs only once on mount
 
-  // Schedule notifications only after boxes are fetched
-  useEffect(() => {
-    if (state.boxes && state.boxes.length > 0) {
-      configureNotifications();
-      scheduleMedicineReminders();
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('user');
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+    } catch (error) {
+      console.log("Error loading user data:", error);
     }
-  }, [state.boxes]);
+  };
 
-  // Configure notification handler and request permissions
-  const configureNotifications = async () => {
+  const configureAndScheduleNotifications = async () => {
+    // Configure notification handler
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -42,6 +51,7 @@ const BoxesScreen = () => {
       }),
     });
 
+    // Check and request permissions
     if (Device.isDevice) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -50,86 +60,108 @@ const BoxesScreen = () => {
         finalStatus = status;
       }
       if (finalStatus !== 'granted') {
-        console.log('Failed to get push notification permissions');
+        console.log('Notification permissions not granted');
         return;
       }
       console.log('Notification permissions granted');
     } else {
       console.log('Must use physical device for notifications');
+      return;
     }
+
+    // Check if notifications have already been scheduled
+    const hasScheduled = await AsyncStorage.getItem('notificationsScheduled');
+    if (hasScheduled === 'true') {
+      console.log('Notifications already scheduled, skipping...');
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      console.log('Currently scheduled notifications:', scheduled);
+      return;
+    }
+
+    // Schedule notifications and mark as scheduled
+    await scheduleMedicineReminders();
+    await AsyncStorage.setItem('notificationsScheduled', 'true');
+    console.log('Notifications scheduled and marked in AsyncStorage');
   };
 
-  // Schedule reminders for each box
   const scheduleMedicineReminders = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('Cancelled existing notifications');
+    console.log('Cancelled all existing notifications');
 
     const boxes = state.boxes || [];
-    console.log('Boxes:', boxes);
+    if (!boxes.length) {
+      console.log('No boxes available to schedule notifications');
+      return;
+    }
 
-    boxes.forEach((box) => {
+    console.log('Scheduling notifications for boxes:', boxes);
+
+    const notificationPromises = boxes.map(async (box) => {
       let trigger;
       let reminderTitle;
       let reminderBody;
 
       switch (box.name.toLowerCase()) {
-        case 'box1': // Day medicine at 8:00 AM
-          trigger = new Date();
-          trigger.setHours(8, 0, 0, 0); // 8:00 AM
-          reminderTitle = 'Day time medicine reminder';
-          reminderBody = 'Take your Box1 medicines';
-          if (trigger < new Date()) trigger.setDate(trigger.getDate() + 1); // Next day if time passed
+        case 'medbox-1':
+          trigger = { hour: 8, minute: 0, repeats: true }; // 8:00 AM
+          reminderTitle = 'Morning Medicine Reminder';
+          reminderBody = 'Time to take your MedBox-1 medicines';
           break;
-        case 'box2': // Midday medicine at 12:00 PM
-          trigger = new Date();
-          trigger.setHours(12, 0, 0, 0); // 12:00 PM
-          reminderTitle = 'Midday medicine reminder';
-          reminderBody = 'Take your Box2 medicines';
-          if (trigger < new Date()) trigger.setDate(trigger.getDate() + 1);
+        case 'medbox-2':
+          trigger = { hour: 12, minute: 0, repeats: true }; // 12:00 PM
+          reminderTitle = 'Midday Medicine Reminder';
+          reminderBody = 'Time to take your MedBox-2 medicines';
           break;
-        case 'box3': // Midnight medicine at 12:00 AM
-          trigger = new Date();
-          trigger.setHours(0, 0, 0, 0); // 12:00 AM
-          reminderTitle = 'Midnight medicine reminder';
-          reminderBody = 'Take your Box3 medicines';
-          if (trigger < new Date()) trigger.setDate(trigger.getDate() + 1);
+        case 'medbox-3':
+          trigger = { hour: 20, minute: 0, repeats: true }; // 8:00 PM
+          reminderTitle = 'Night Medicine Reminder';
+          reminderBody = 'Time to take your MedBox-3 medicines';
           break;
         default:
-          return;
+          return null;
       }
 
-      console.log(`Scheduling for ${box.name} at ${trigger}`);
-      Notifications.scheduleNotificationAsync({
+      const notificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: reminderTitle,
           body: reminderBody,
           data: { boxId: box._id },
         },
-        trigger: {
-          hour: trigger.getHours(),
-          minute: trigger.getMinutes(),
-          repeats: true, // Repeat daily
-        },
+        trigger,
       });
+
+      console.log(`Scheduled ${box.name} notification with ID: ${notificationId} at ${trigger.hour}:${trigger.minute}`);
+      return notificationId;
     });
+
+    await Promise.all(notificationPromises.filter(Boolean));
   };
 
-  // Test notification function
-  // const triggerTestNotification = async () => {
-  //   await Notifications.scheduleNotificationAsync({
-  //     content: {
-  //       title: 'Test Notification',
-  //       body: 'This is a test!',
-  //     },
-  //     trigger: { seconds: 1 },
-  //   });
-  // };
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.clear(); // Clear all stored data, including notificationsScheduled flag
+      await Notifications.cancelAllScheduledNotificationsAsync(); // Clear notifications on logout
+      console.log('Logged out and cleared notifications');
+      navigation.replace("Login");
+    } catch (error) {
+      console.log("Error logging out:", error);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* <TouchableOpacity onPress={triggerTestNotification} style={{ padding: 10, backgroundColor: 'blue' }}>
-        <Text style={{ color: 'white' }}>Test Notification</Text>
-      </TouchableOpacity> */}
+      {user && (
+        <View style={styles.profileContainer}>
+          <View>
+            <Text style={styles.profileTitle}>Welcome, {user.name}!</Text>
+            <Text style={styles.profileEmail}>{user.email}</Text>
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.scheduleButtonContainer}>
           <Text style={styles.scheduleButtonText}>Schedule</Text>
@@ -190,6 +222,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  profileContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingTop: 55,
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginRight: 10,
+    marginLeft: 10,
+  },
+  profileTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4E58C7',
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: '#657C7E',
+    marginVertical: 4,
+  },
+  logoutButton: {
+    backgroundColor: '#4E58C7',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  logoutButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
   scrollContainer: {
     padding: 16,
   },
@@ -238,7 +303,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: "#4E58C7"
+    color: "#4E58C7",
   },
   boxDescription: {
     fontSize: 16,
@@ -279,12 +344,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
-    zIndex: 100
+    zIndex: 100,
   },
   aiIcon: {
     width: 32,
     height: 29,
-  }
+  },
 });
 
 export default BoxesScreen;

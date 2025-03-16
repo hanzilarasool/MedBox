@@ -12,7 +12,8 @@ const medical_chatbot = async (userInput) => {
       history: [
         {
           role: "user",
-          parts: [{ text: "You are a professional medical assistant. Only answer medical-related questions." }]
+          parts: [{ text: "You are a professional medical assistant. Only answer medical-related questions. If a non-medical question is asked, respond with 'I can only assist with medical-related queries.'"
+}]
         }
       ]
     });
