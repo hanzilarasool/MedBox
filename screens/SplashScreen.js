@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import LottieView from "lottie-react-native";
 
 const SplashScreen = ({ navigation }) => {
   useEffect(() => {
@@ -10,11 +11,17 @@ const SplashScreen = ({ navigation }) => {
   
     return () => clearTimeout(timer);
   }, [navigation]);
-  
+
   return (
     <View style={styles.container}>
-      {/* <Image source={require("./assets/logo.png")} style={styles.logo} /> */}
-      <Text style={styles.headline}>Welcome to MedBox.io</Text>
+      {/* Lottie animation */}
+      <LottieView
+        source={require("../assets/preventive-health-care.json")} // Replace with your animation file path
+        autoPlay
+        loop
+        style={styles.animation}
+      />
+      <Text style={styles.headline}>Welcome to <Text style={{color:"rgb(93, 101, 176)",fontSize:"24"}}>MedBox</Text></Text>
     </View>
   );
 };
@@ -26,13 +33,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f2f2f2",
   },
-  logo: {
-    width: 150,
+  animation: {
+    width: 150, // Set your desired animation size
     height: 150,
     marginBottom: 20,
   },
   headline: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#333",
   },

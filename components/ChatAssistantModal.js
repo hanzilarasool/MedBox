@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { Modal, View, TextInput, TouchableOpacity, StyleSheet, ScrollView, Text, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from "expo-constants";
 
+const IP = Constants.expoConfig.extra.IP;
 const ChatAssistantModal = ({ visible, onClose }) => {
   const [input, setInput] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
@@ -38,7 +40,7 @@ const ChatAssistantModal = ({ visible, onClose }) => {
     setInput('');
 
     try {
-      const response = await fetch('http://192.168.1.4:5000/api/chat', {
+      const response = await fetch(`http://${IP}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

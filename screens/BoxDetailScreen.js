@@ -1,9 +1,10 @@
 // Screens/BoxDetailScreen.js
-import React, { useContext,useState } from 'react';
+import React, { useContext,useState,useEffect } from 'react';
 import { View, Text, StyleSheet,Image,Pressable } from 'react-native';
 import { useBoxes } from '../contexts/BoxesContext';
 import AddMedicineModal from '../components/AddMedicineModal';
 import EditMedicineModal from '../components/EditMedicineModel';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BoxDetailScreen = () => {
   const { state,addMedicine,deleteMedicine,updateMedicine } = useBoxes();
@@ -12,6 +13,64 @@ const BoxDetailScreen = () => {
 const [modalVisible, setModalVisible] = useState(false);
 const [editModalVisible, setEditModalVisible] = useState(false);
 const [selectedMedicine, setSelectedMedicine] = useState(null);
+
+// taken medicine handling
+const [takenStatus, setTakenStatus] = useState({});
+// Load taken status from storage when component mounts
+useEffect(() => {
+  loadTakenStatus();
+  setupDailyReset();
+}, []);
+
+// Load taken status from AsyncStorage
+// Load taken status from AsyncStorage
+const loadTakenStatus = async () => {
+  try {
+    const storedStatus = await AsyncStorage.getItem('medicineTakenStatus');
+    if (storedStatus) {
+      setTakenStatus(JSON.parse(storedStatus));
+    }
+  } catch (error) {
+    console.error('Error loading taken status:', error);
+  }
+};
+
+// Save taken status to AsyncStorage
+const saveTakenStatus = async (newStatus) => {
+  try {
+    await AsyncStorage.setItem('medicineTakenStatus', JSON.stringify(newStatus));
+  } catch (error) {
+    console.error('Error saving taken status:', error);
+  }
+};
+
+// Reset status at midnight
+const setupDailyReset = () => {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  
+  const msUntilMidnight = midnight.getTime() - now.getTime();
+  
+  setTimeout(() => {
+    setTakenStatus({});
+    saveTakenStatus({});
+    // Set up next day's reset
+    setInterval(() => {
+      setTakenStatus({});
+      saveTakenStatus({});
+    }, 24 * 60 * 60 * 1000);
+  }, msUntilMidnight);
+};
+
+const toggleTakenStatus = (medicineId) => {
+  const newStatus = {
+    ...takenStatus,
+    [medicineId]: !takenStatus[medicineId]
+  };
+  setTakenStatus(newStatus);
+  saveTakenStatus(newStatus);
+};
 // handle add medicine
 
 const handleAddMedicine = async (medicineData) => {
@@ -117,6 +176,24 @@ const handleDeleteMedicine = async (medicineId) => {
             <Text style={styles.medicineName}>{medicine.name}</Text>
             <Text>Dosage: {medicine.dosage}</Text>
             <Text>Time: {medicine.time}</Text>
+            <Pressable 
+                style={[
+                  styles.statusButton,
+                  takenStatus[medicine._id] && styles.takenButton
+                ]}
+                onPress={() => toggleTakenStatus(medicine._id)}
+              >
+                <View style={[
+                  styles.radioCircle,
+                  takenStatus[medicine._id] && styles.radioCircleFilled
+                ]} />
+                <Text style={[
+                  styles.statusText,
+                  takenStatus[medicine._id] && styles.takenText
+                ]}>
+                  {takenStatus[medicine._id] ? 'Taken' : 'Take'}
+                </Text>
+              </Pressable>
             </View>
 
           </View>
@@ -179,6 +256,48 @@ padding:8,
 marginBottom:12,
 borderRadius:10,
   },
+
+
+// take /taken style
+
+statusButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginTop: 4,
+  // padding: 4,
+  marginLeft:130,
+  // marginBottom:20,
+
+},
+takenButton: {
+  backgroundColor: '#E6F0FA',
+  borderRadius: 4,
+},
+radioCircle: {
+  width: 17,
+  height: 17,
+  borderRadius: 9,
+  borderWidth: 2,
+  borderColor: '#4E58C7',
+  marginRight: 6,
+},
+radioCircleFilled: {
+  backgroundColor: '#4E58C7',
+  borderColor: '#4E58C7',
+},
+statusText: {
+  color: '#4E58C7',
+  fontSize: 18,
+  fontWeight:"500"
+},
+takenText: {
+  fontWeight: '600',
+  // fontSize:55,
+},
+
+
+// take taken styles ends
+
 //   selected box styles
 boxContainer: {
     backgroundColor: 'white',

@@ -1,4 +1,3 @@
-// Screens/BoxesScreen.js
 import React, { useContext, useEffect, useState } from 'react';
 import { 
   View, 
@@ -7,12 +6,14 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   Image,
-  Modal // Added Modal import
+  Modal 
 } from 'react-native';
 import ChatAssistantModal from '../components/ChatAssistantModal';
 import { Ionicons } from '@expo/vector-icons';
 import { BoxesContext } from '../contexts/BoxesContext';
 import { useNavigation } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 
 const BoxesScreen = () => {
   const { state, fetchBoxes, selectBox } = useContext(BoxesContext);
@@ -23,8 +24,112 @@ const BoxesScreen = () => {
     fetchBoxes();
   }, []);
 
+  // Schedule notifications only after boxes are fetched
+  useEffect(() => {
+    if (state.boxes && state.boxes.length > 0) {
+      configureNotifications();
+      scheduleMedicineReminders();
+    }
+  }, [state.boxes]);
+
+  // Configure notification handler and request permissions
+  const configureNotifications = async () => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('Failed to get push notification permissions');
+        return;
+      }
+      console.log('Notification permissions granted');
+    } else {
+      console.log('Must use physical device for notifications');
+    }
+  };
+
+  // Schedule reminders for each box
+  const scheduleMedicineReminders = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    console.log('Cancelled existing notifications');
+
+    const boxes = state.boxes || [];
+    console.log('Boxes:', boxes);
+
+    boxes.forEach((box) => {
+      let trigger;
+      let reminderTitle;
+      let reminderBody;
+
+      switch (box.name.toLowerCase()) {
+        case 'box1': // Day medicine at 8:00 AM
+          trigger = new Date();
+          trigger.setHours(8, 0, 0, 0); // 8:00 AM
+          reminderTitle = 'Day time medicine reminder';
+          reminderBody = 'Take your Box1 medicines';
+          if (trigger < new Date()) trigger.setDate(trigger.getDate() + 1); // Next day if time passed
+          break;
+        case 'box2': // Midday medicine at 12:00 PM
+          trigger = new Date();
+          trigger.setHours(12, 0, 0, 0); // 12:00 PM
+          reminderTitle = 'Midday medicine reminder';
+          reminderBody = 'Take your Box2 medicines';
+          if (trigger < new Date()) trigger.setDate(trigger.getDate() + 1);
+          break;
+        case 'box3': // Midnight medicine at 12:00 AM
+          trigger = new Date();
+          trigger.setHours(0, 0, 0, 0); // 12:00 AM
+          reminderTitle = 'Midnight medicine reminder';
+          reminderBody = 'Take your Box3 medicines';
+          if (trigger < new Date()) trigger.setDate(trigger.getDate() + 1);
+          break;
+        default:
+          return;
+      }
+
+      console.log(`Scheduling for ${box.name} at ${trigger}`);
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: reminderTitle,
+          body: reminderBody,
+          data: { boxId: box._id },
+        },
+        trigger: {
+          hour: trigger.getHours(),
+          minute: trigger.getMinutes(),
+          repeats: true, // Repeat daily
+        },
+      });
+    });
+  };
+
+  // Test notification function
+  // const triggerTestNotification = async () => {
+  //   await Notifications.scheduleNotificationAsync({
+  //     content: {
+  //       title: 'Test Notification',
+  //       body: 'This is a test!',
+  //     },
+  //     trigger: { seconds: 1 },
+  //   });
+  // };
+
   return (
     <View style={styles.container}>
+      {/* <TouchableOpacity onPress={triggerTestNotification} style={{ padding: 10, backgroundColor: 'blue' }}>
+        <Text style={{ color: 'white' }}>Test Notification</Text>
+      </TouchableOpacity> */}
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.scheduleButtonContainer}>
           <Text style={styles.scheduleButtonText}>Schedule</Text>
@@ -65,12 +170,10 @@ const BoxesScreen = () => {
         ))}
       </ScrollView>
 
-      {/* Floating Action Button */}
       <TouchableOpacity 
         style={styles.fab}
         onPress={() => setShowChat(true)}
       >
-        {/* <Ionicons name="medical" size={28} color="white" /> */}
         <Image source={require("../assets/icons/ai.png")} style={styles.aiIcon} />
       </TouchableOpacity>
 
@@ -178,11 +281,10 @@ const styles = StyleSheet.create({
     elevation: 4,
     zIndex: 100
   },
-  aiIcon:{
-    width:32,
-    height:29,
+  aiIcon: {
+    width: 32,
+    height: 29,
   }
-
 });
 
 export default BoxesScreen;

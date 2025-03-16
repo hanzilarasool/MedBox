@@ -2,7 +2,9 @@
 import React, { createContext, useReducer, useContext } from 'react';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from "expo-constants";
 
+const IP = Constants.expoConfig.extra.IP;
 export const BoxesContext = createContext();
 
 const initialState = {
@@ -49,7 +51,7 @@ const fetchBoxes = async () => {
       const token = await AsyncStorage.getItem('token');
       console.log('Fetching boxes with token:', token); // Add this
       
-      const response = await axios.get('http://192.168.1.4:5000/api/boxes', {
+      const response = await axios.get(`http:${IP}:5000/api/boxes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -69,7 +71,7 @@ const addMedicine = async (boxId, medicineData) => {
       dispatch({ type: 'FETCH_BOXES_REQUEST' });
       
       const response = await axios.post(
-        `http://192.168.1.4:5000/api/boxes/${boxId}/medicines`,
+        `http:${IP}:5000/api/boxes/${boxId}/medicines`,
         medicineData,{
             headers: { Authorization: `Bearer ${token}` }
           }
@@ -92,7 +94,7 @@ const deleteMedicine = async (boxId, medicineId) => {
         const token = await AsyncStorage.getItem('token');
       dispatch({ type: 'FETCH_BOXES_REQUEST' });
       const response = await axios.delete(
-        `http://192.168.1.4:5000/api/boxes/${boxId}/medicines/${medicineId}`,{
+        `http:${IP}:5000/api/boxes/${boxId}/medicines/${medicineId}`,{
             headers: { Authorization: `Bearer ${token}` }
           }
       );
@@ -112,7 +114,7 @@ const updateMedicine = async (boxId, medicineId, medicineData) => {
         const token = await AsyncStorage.getItem('token');
       dispatch({ type: 'FETCH_BOXES_REQUEST' });
       const response = await axios.put(
-        `http://192.168.1.4:5000/api/boxes/${boxId}/medicines/${medicineId}`,
+        `http:${IP}:5000/api/boxes/${boxId}/medicines/${medicineId}`,
         medicineData,
         {
             headers: { Authorization: `Bearer ${token}` }

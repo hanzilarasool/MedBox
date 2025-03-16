@@ -12,7 +12,7 @@ const medical_chatbot = async (userInput) => {
       history: [
         {
           role: "user",
-          parts: [{ text: "You are a professional medical assistant..." }]
+          parts: [{ text: "You are a professional medical assistant. Only answer medical-related questions." }]
         }
       ]
     });

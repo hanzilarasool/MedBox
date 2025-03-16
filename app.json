@@ -1,5 +1,11 @@
 {
   "expo": {
+   "extra": {
+      "IP": "192.168.1.2",
+      "abc":"hanzila"
+    
+    },
+
     "name": "MedicineBoxApp",
     "slug": "MedicineBoxApp",
     "version": "1.0.0",
