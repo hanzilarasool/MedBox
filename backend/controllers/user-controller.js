@@ -1,3 +1,4 @@
+// controllers/user-controller.js
 const User = require("../models/user-model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -72,7 +73,7 @@ const register = async (req, res) => {
 // Verify OTP and Complete Registration (Step 2)
 const verifyOTP = async (req, res) => {
   try {
-    const { email, otp } = req.body; // Only expect email and otp
+    const { email, otp } = req.body;
 
     // Validate OTP
     const storedOtp = await Otp.findOne({ email });
@@ -80,7 +81,7 @@ const verifyOTP = async (req, res) => {
       return res.status(400).json({ error: "Invalid or expired OTP" });
     }
 
-    const { name, password } = storedOtp; // Retrieve name and password from OTP record
+    const { name, password } = storedOtp;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -91,8 +92,8 @@ const verifyOTP = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create a new user
-    const user = await User.create({ name, email, password: hashedPassword });
+    // Create a new user with role "patient" by default
+    const user = await User.create({ name, email, password: hashedPassword, role: "patient" });
 
     // Create default boxes for new user
     const defaultBoxes = [
@@ -122,29 +123,48 @@ const login = async (req, res) => {
     console.log(req.body, "data");
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: "User not found" }); // Changed to 400 for consistency
+    if (!user) return res.status(400).json({ error: "User not found" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id }, "your_secret_key", { expiresIn: "1h" });
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET || "your_secret_key",
+      { expiresIn: "1h" }
+    );
 
     res.status(200).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-// User Logout (Optional server-side endpoint)
+
+// User Logout
 const logout = async (req, res) => {
   try {
-    // Since JWT is stateless, server doesn't need to do much.
-    // Client clears the token, so this is just a confirmation endpoint.
     res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-module.exports = { register, verifyOTP, login,logout };
+
+// Get All Patients (for Admin Dashboard)
+const getAllPatients = async (req, res) => {
+  try {
+    // Ensure only admins can access this endpoint
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Access denied: Admins only" });
+    }
+
+    const patients = await User.find({ role: "patient" }, { password: 0 }); // Exclude password field
+    res.json(patients);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = { register, verifyOTP, login, logout, getAllPatients };

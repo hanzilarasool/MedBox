@@ -1,4 +1,4 @@
-// backend/models/Box.js
+// backend/models/box-model.js
 const mongoose = require('mongoose');
 
 const boxSchema = new mongoose.Schema({
@@ -20,7 +20,25 @@ const boxSchema = new mongoose.Schema({
     name: String,
     dosage: String,
     time: String
-  }] 
+  }],
+  history: [{
+    medicineId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
+    },
+    name: String,
+    dosage: String,
+    time: String,
+    takenAt: {
+      type: Date,
+      default: Date.now
+    },
+    action: {
+      type: String,
+      enum: ['taken', 'untaken'],
+      required: true
+    }
+  }]
 });
 
 module.exports = mongoose.model('Box', boxSchema);

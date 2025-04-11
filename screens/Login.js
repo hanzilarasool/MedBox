@@ -1,3 +1,4 @@
+// screens/Login.js
 import React, { useState } from "react";
 import { View, TextInput, Text, StyleSheet, TouchableOpacity } from "react-native";
 import axios from "axios";
@@ -25,13 +26,22 @@ const Login = ({ navigation }) => {
         password,
       });
 
+      const { token, user } = response.data;
+
       await AsyncStorage.multiSet([
-        ['token', response.data.token],
-        ['user', JSON.stringify(response.data.user)],
+        ['token', token],
+        ['user', JSON.stringify(user)],
       ]);
 
       setSuccess("Login successful!");
-      setTimeout(() => navigation.navigate("Boxes"), 1000); // Navigate after 1 second
+
+      setTimeout(() => {
+        if (user.role === 'admin') {
+          navigation.replace("AdminDashboard");
+        } else {
+          navigation.replace("Boxes");
+        }
+      }, 1000); // Navigate after 1 second to show success message
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");
     }

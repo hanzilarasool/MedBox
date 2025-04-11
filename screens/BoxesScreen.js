@@ -6,7 +6,9 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   Image,
-  Modal 
+  Modal,
+  Pressable,
+  Alert
 } from 'react-native';
 import ChatAssistantModal from '../components/ChatAssistantModal';
 import { BoxesContext } from '../contexts/BoxesContext';
@@ -14,7 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+// import { useNavigation } from '@react-navigation/native';
 const BoxesScreen = () => {
   const { state, fetchBoxes, selectBox } = useContext(BoxesContext);
   const navigation = useNavigation();
@@ -26,6 +28,18 @@ const BoxesScreen = () => {
       await fetchBoxes();
       await loadUserData();
       await configureAndScheduleNotifications();
+
+      // Schedule a notification for 9:27 AM today
+      await scheduleMorningNotification();
+
+      // Listener for foreground notifications
+      const subscription = Notifications.addNotificationReceivedListener(notification => {
+        console.log('Notification received in foreground:', notification);
+        Alert.alert('Notification', notification.request.content.body);
+      });
+
+      // Cleanup on unmount
+      return () => subscription.remove();
     };
     initialize();
   }, []); // Runs only once on mount
@@ -42,7 +56,6 @@ const BoxesScreen = () => {
   };
 
   const configureAndScheduleNotifications = async () => {
-    // Configure notification handler
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -51,7 +64,6 @@ const BoxesScreen = () => {
       }),
     });
 
-    // Check and request permissions
     if (Device.isDevice) {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -61,15 +73,16 @@ const BoxesScreen = () => {
       }
       if (finalStatus !== 'granted') {
         console.log('Notification permissions not granted');
+        Alert.alert('Permissions Denied', 'Please enable notifications in your device settings.');
         return;
       }
       console.log('Notification permissions granted');
     } else {
       console.log('Must use physical device for notifications');
+      Alert.alert('Error', 'Notifications only work on a physical device.');
       return;
     }
 
-    // Check if notifications have already been scheduled
     const hasScheduled = await AsyncStorage.getItem('notificationsScheduled');
     if (hasScheduled === 'true') {
       console.log('Notifications already scheduled, skipping...');
@@ -78,69 +91,83 @@ const BoxesScreen = () => {
       return;
     }
 
-    // Schedule notifications and mark as scheduled
     await scheduleMedicineReminders();
     await AsyncStorage.setItem('notificationsScheduled', 'true');
     console.log('Notifications scheduled and marked in AsyncStorage');
   };
 
-  const scheduleMedicineReminders = async () => {
+  const scheduleMorningNotification = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('Cancelled all existing notifications');
+    console.log('Cancelled all existing notifications for 9:27 AM reminder');
 
-    const boxes = state.boxes || [];
-    if (!boxes.length) {
-      console.log('No boxes available to schedule notifications');
+    // Get the current device time
+    const now = new Date();
+    console.log('Current device time:', now.toLocaleString());
+
+    // Set the target time to 9:27 AM today (March 20, 2025)
+    const targetTime = new Date(now);
+    targetTime.setHours(9, 27, 0, 0); // 9:27 AM today
+
+    // If 9:27 AM has already passed today, adjust to tomorrow
+    if (now > targetTime) {
+      console.log('9:27 AM today has already passed. Adjusting to tomorrow.');
+      targetTime.setDate(targetTime.getDate() + 1); // Move to 9:27 AM tomorrow (March 21, 2025)
+    }
+
+    // Calculate seconds until 9:27 AM
+    const secondsUntilTarget = Math.floor((targetTime - now) / 1000);
+    console.log(`Seconds until 9:27 AM: ${secondsUntilTarget}`);
+
+    if (secondsUntilTarget < 0) {
+      console.log('Target time is in the past. Notification won’t trigger.');
       return;
     }
 
-    console.log('Scheduling notifications for boxes:', boxes);
-
-    const notificationPromises = boxes.map(async (box) => {
-      let trigger;
-      let reminderTitle;
-      let reminderBody;
-
-      switch (box.name.toLowerCase()) {
-        case 'medbox-1':
-          trigger = { hour: 8, minute: 0, repeats: true }; // 8:00 AM
-          reminderTitle = 'Morning Medicine Reminder';
-          reminderBody = 'Time to take your MedBox-1 medicines';
-          break;
-        case 'medbox-2':
-          trigger = { hour: 12, minute: 0, repeats: true }; // 12:00 PM
-          reminderTitle = 'Midday Medicine Reminder';
-          reminderBody = 'Time to take your MedBox-2 medicines';
-          break;
-        case 'medbox-3':
-          trigger = { hour: 20, minute: 0, repeats: true }; // 8:00 PM
-          reminderTitle = 'Night Medicine Reminder';
-          reminderBody = 'Time to take your MedBox-3 medicines';
-          break;
-        default:
-          return null;
-      }
-
-      const notificationId = await Notifications.scheduleNotificationAsync({
-        content: {
-          title: reminderTitle,
-          body: reminderBody,
-          data: { boxId: box._id },
-        },
-        trigger,
-      });
-
-      console.log(`Scheduled ${box.name} notification with ID: ${notificationId} at ${trigger.hour}:${trigger.minute}`);
-      return notificationId;
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Morning Reminder',
+        body: 'It’s 9:27 AM! Time for your daily check-in.',
+        data: { test: '9-27-am-reminder' },
+      },
+      trigger: { seconds: secondsUntilTarget, repeats: false }, // Trigger at 9:27 AM
     });
 
-    await Promise.all(notificationPromises.filter(Boolean));
+    console.log('Scheduled 9:27 AM notification with ID:', notificationId);
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    console.log('Currently scheduled notifications:', scheduled);
+  };
+
+  const scheduleMedicineReminders = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    console.log('Cancelled all existing notifications');
+  
+    const boxes = state.boxes || [];
+    if (!boxes.length) {
+      console.log('No boxes available');
+      return;
+    }
+  
+    const testTrigger = { seconds: 60, repeats: false };
+    const notificationPromises = boxes.map(async (box) => {
+      const notificationId = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Reminder for ${box.name}`,
+          body: `Time to check ${box.name}, 1 minute from now!`,
+          data: { boxId: box._id },
+        },
+        trigger: testTrigger,
+      });
+      console.log(`Scheduled ${box.name} with ID: ${notificationId}`);
+      return notificationId;
+    });
+  
+    await Promise.all(notificationPromises);
   };
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.clear(); // Clear all stored data, including notificationsScheduled flag
-      await Notifications.cancelAllScheduledNotificationsAsync(); // Clear notifications on logout
+      await AsyncStorage.clear();
+      await Notifications.cancelAllScheduledNotificationsAsync();
       console.log('Logged out and cleared notifications');
       navigation.replace("Login");
     } catch (error) {
@@ -170,7 +197,7 @@ const BoxesScreen = () => {
             style={styles.bellIcon}
           />
         </View>
-        
+    
         {state.boxes?.map((box) => (
           <TouchableOpacity
             key={box._id}

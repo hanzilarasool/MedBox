@@ -1,15 +1,15 @@
 {
   "expo": {
-   "extra": {
-      "IP": "192.168.1.2",
-      "abc":"hanzila"
-    
+    "extra": {
+      "IP": "192.168.1.5",
+      "abc": "hanzila",
+      "eas": {
+        "projectId": "8fd8c1bf-5167-4e5a-9b74-797094d4df46"
+      }
     },
-
     "name": "MedicineBoxApp",
     "slug": "MedicineBoxApp",
     "version": "1.0.0",
-  
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -26,7 +26,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.hanzilarasool.MedicineBoxApp"
     }
   }
 }
