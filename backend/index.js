@@ -7,7 +7,7 @@ const userRouter=require("./routes/user-routes");
 const chatRouter = require("./routes/chat-routes");
 // middleware
 
-require("dotenv").config();
+require("dotenv").config(); 
 
 const app = express();
 app.use(cors());
