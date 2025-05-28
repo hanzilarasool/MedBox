@@ -1,7 +1,7 @@
 {
   "expo": {
     "extra": {
-      "IP": "192.168.18.16",
+      "IP": "https://medbox.onrender.com",
       "abc": "hanzila",
       "eas": {
         "projectId": "8fd8c1bf-5167-4e5a-9b74-797094d4df46"
